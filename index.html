@@ -2239,29 +2239,33 @@
 
         .cursor-blob {
             position: fixed;
+            top: 0;
+            left: 0;
             width: 55px;
             height: 55px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(249, 115, 22, 0.28), rgba(236, 72, 153, 0.12));
             pointer-events: none;
             z-index: 99998;
-            transform: translate(-50%, -50%);
             filter: blur(12px);
             transition: width 0.4s ease, height 0.4s ease;
             mix-blend-mode: screen;
+            will-change: transform;
         }
 
         .cursor-dot {
             position: fixed;
+            top: 0;
+            left: 0;
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: var(--accent);
             pointer-events: none;
             z-index: 99999;
-            transform: translate(-50%, -50%);
             box-shadow: 0 0 8px var(--accent-glow);
             transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+            will-change: transform;
         }
 
         body.cursor-hovering .cursor-blob {
@@ -3083,17 +3087,8 @@
         document.addEventListener('mousemove', (e) => {
             cursorTargetX = e.clientX;
             cursorTargetY = e.clientY;
-            cursorDot.style.left = `${e.clientX}px`;
-            cursorDot.style.top = `${e.clientY}px`;
+            cursorDot.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
         });
-
-        (function animateBlob() {
-            blobX += (cursorTargetX - blobX) * 0.1;
-            blobY += (cursorTargetY - blobY) * 0.1;
-            cursorBlob.style.left = `${blobX}px`;
-            cursorBlob.style.top = `${blobY}px`;
-            requestAnimationFrame(animateBlob);
-        })();
 
         document.querySelectorAll('a, button, .skill-card, .project-card, .product-card, .featured-card, .contribution-card, .timeline-card, .contact-item').forEach(el => {
             el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hovering'));
@@ -3126,7 +3121,7 @@
         let mouseParticleX = -9999, mouseParticleY = -9999;
         document.addEventListener('mousemove', (e) => { mouseParticleX = e.clientX; mouseParticleY = e.clientY; });
 
-        const pts = Array.from({ length: 55 }, () => ({
+        const pts = Array.from({ length: 25 }, () => ({
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
             vx: (Math.random() - 0.5) * 0.35,
@@ -3170,20 +3165,28 @@
                 pCtx.fill();
             });
 
+            // Batch line drawing into a single path per color
+            pCtx.beginPath();
+            pCtx.lineWidth = isLight ? 0.8 : 0.6;
             for (let i = 0; i < pts.length; i++) {
                 for (let j = i + 1; j < pts.length; j++) {
                     const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-                    const d = Math.sqrt(dx * dx + dy * dy);
-                    if (d < 130) {
-                        pCtx.beginPath();
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < 10000) { // 100px connection distance
+                        const d = Math.sqrt(distSq);
                         pCtx.moveTo(pts[i].x, pts[i].y);
                         pCtx.lineTo(pts[j].x, pts[j].y);
-                        pCtx.strokeStyle = `${lineColor} ${(1 - d / 130) * lineAlpha})`;
-                        pCtx.lineWidth = isLight ? 0.8 : 0.6;
-                        pCtx.stroke();
                     }
                 }
             }
+            pCtx.strokeStyle = `${lineColor} ${lineAlpha})`;
+            pCtx.stroke();
+
+            // Animate blob cursor in same RAF loop
+            blobX += (cursorTargetX - blobX) * 0.1;
+            blobY += (cursorTargetY - blobY) * 0.1;
+            cursorBlob.style.transform = `translate(${blobX}px, ${blobY}px)`;
+
             requestAnimationFrame(drawParticles);
         })();
 
@@ -3253,41 +3256,7 @@
             if (h1) scrambleText(h1, 1600);
         }, 400);
 
-        // Subtle cursor trail effect
-        let lastTime = 0;
-        const throttle = 100;
-
-        document.addEventListener('mousemove', (e) => {
-            const now = Date.now();
-            if (now - lastTime < throttle) return;
-            lastTime = now;
-
-            if (Math.random() > 0.85) {
-                const trail = document.createElement('div');
-                trail.style.cssText = `
-                    position: fixed;
-                    left: ${e.clientX}px;
-                    top: ${e.clientY}px;
-                    width: 4px;
-                    height: 4px;
-                    border-radius: 50%;
-                    background: var(--accent);
-                    pointer-events: none;
-                    z-index: 9999;
-                    opacity: 0.5;
-                    filter: blur(2px);
-                    transition: all 0.5s ease;
-                `;
-                
-                document.body.appendChild(trail);
-                
-                setTimeout(() => {
-                    trail.style.opacity = '0';
-                    trail.style.transform = 'scale(2)';
-                    setTimeout(() => trail.remove(), 500);
-                }, 50);
-            }
-        });
+        // Cursor trail removed for performance
     </script>
 </body>
 </html>
